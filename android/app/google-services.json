@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "854083840690",
+    "firebase_url": "https://htyw-ab76e-default-rtdb.firebaseio.com",
+    "project_id": "htyw-ab76e",
+    "storage_bucket": "htyw-ab76e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:854083840690:android:bb61bf378a3fc76548f7ab",
+        "android_client_info": {
+          "package_name": "com.example.sars"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1IMEvHTwx7VSYJaW1wqtSMSIveHNgZX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
