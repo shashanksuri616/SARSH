@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dl_prediction_page.dart'; // Import your DL prediction page
+import 'dl_prediction_page.dart';
+import 'sar_colorization_page.dart'; // Import the SAR colorization page
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -10,9 +11,11 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0;
 
+  // Updated list of pages to include the SARColorizationPage
   final List<Widget> _pages = [
-    DashboardContent(), // Your dashboard content page
-    DLPredictionPage(), // The DL prediction page
+    DashboardContent(),
+    DLPredictionPage(),
+    SARColorizationPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -40,17 +43,24 @@ class _DashboardPageState extends State<DashboardPage> {
             label: 'DL Prediction',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.image),
+            label: 'SAR Colorization',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.logout),
             label: 'Logout',
           ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.black,
+        backgroundColor: Colors.black,
         onTap: (index) {
-          if (index == 2) {
+          if (index == 3) {
             // Logout functionality
             FirebaseAuth.instance.signOut();
-            Navigator.of(context).pushReplacementNamed('/login'); // Navigate back to the login page
+            Navigator.of(context).pushReplacementNamed(
+                '/login'); // Navigate back to the login page
           } else {
             _onItemTapped(index);
           }

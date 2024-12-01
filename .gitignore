@@ -4,7 +4,6 @@
 *.pyc
 *.swp
 
-/lib/*.h5
 /lib/auth/.env
 
 .DS_Store
