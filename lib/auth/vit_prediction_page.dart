@@ -1,11 +1,10 @@
-// vit_prediction_page.dart
-import 'dart:convert'; // Import this for JSON decoding
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:photo_view/photo_view.dart';
-import 'package:photo_view/photo_view_gallery.dart';
 
 class VITPredictionPage extends StatefulWidget {
   @override
@@ -16,10 +15,14 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
   String _result = '';
+  String? _selectedSampleImage;
+  final Map<String, String> sampleImages = {
+    'Sample Image 1': 'assets/images/sample1.jpeg',
+    'Sample Image 2': 'assets/images/sample2.jpeg',
+  };
   final List<String> groundTruths = [
-    'Ground Truth 1',
-    'Ground Truth 2',
-    'Ground Truth 3',
+    'Maize',
+    'Wheat',
   ];
 
   // Pick an image from the gallery
@@ -28,44 +31,52 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
     if (pickedFile != null) {
       setState(() {
         _image = File(pickedFile.path);
+        _selectedSampleImage = null; // Reset sample image selection
       });
     }
   }
 
+  // Load a sample image
+  Future<void> _loadSampleImage(String assetPath) async {
+    setState(() {
+      _image = null; // Reset _image as it's for user-uploaded files
+      _selectedSampleImage = sampleImages.keys.firstWhere(
+            (key) => sampleImages[key] == assetPath,
+      );
+      _result = ''; // Clear prediction result for a new sample
+    });
+  }
+
   // Send the image to the Flask server for prediction
-  // Future<void> _predict() async {
-  //   if (_image == null) return;
-  //
-  //   final request = http.MultipartRequest(
-  //     'POST',
-  //     Uri.parse('http://172.16.20.30:5000/predict_vit'), // Replace with your Flask server URL
-  //   );
-  //   request.files.add(
-  //     await http.MultipartFile.fromPath('image', _image!.path),
-  //   );
-  //
-  //   final response = await request.send();
-  //   final responseData = await response.stream.bytesToString();
-  //
-  //   setState(() {
-  //     _result = responseData;
-  //   });
-  // }
-
-
-// Send the image to the Flask server for prediction
   Future<void> _predict() async {
-    if (_image == null) return;
-
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('http://172.16.20.30:5000/predict_vit'), // Replace with your Flask server URL
-    );
-    request.files.add(
-      await http.MultipartFile.fromPath('image', _image!.path),
-    );
+    if (_image == null && _selectedSampleImage == null) return;
 
     try {
+      http.MultipartRequest request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://192.168.0.195:5000/predict_vit'), // Replace with your Flask server URL
+      );
+
+      if (_image != null) {
+        // User-uploaded file
+        request.files.add(
+          await http.MultipartFile.fromPath('image', _image!.path),
+        );
+      } else if (_selectedSampleImage != null) {
+        // Asset image
+        final assetPath = sampleImages[_selectedSampleImage]!;
+        final byteData = await rootBundle.load(assetPath); // Load the asset
+        final fileBytes = byteData.buffer.asUint8List();
+
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            fileBytes,
+            filename: _selectedSampleImage, // Give it a name
+          ),
+        );
+      }
+
       final response = await request.send();
       final responseData = await response.stream.bytesToString();
 
@@ -73,7 +84,7 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
       final decodedResponse = json.decode(responseData);
 
       // Extract prediction field
-      final prediction = decodedResponse['predicted_class']; // Update 'prediction' key based on your JSON structure
+      final prediction = decodedResponse['predicted_class']; // Update this key based on your JSON structure
 
       setState(() {
         _result = prediction != null ? prediction.toString() : 'No prediction found.';
@@ -83,6 +94,16 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
         _result = 'Error: Unable to fetch prediction.';
       });
     }
+  }
+
+
+  // Get ground truth for selected sample
+  String? _getGroundTruth() {
+    if (_selectedSampleImage != null) {
+      int index = sampleImages.keys.toList().indexOf(_selectedSampleImage!);
+      return groundTruths[index];
+    }
+    return null;
   }
 
   @override
@@ -108,34 +129,33 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
                   ),
                 ),
                 SizedBox(height: 20),
-                _image == null
-                    ? Text(
-                  'No image selected.',
-                  style: TextStyle(color: Colors.white),
-                )
-                    : GestureDetector(
-                  onTap: () {
-                    // Open a zoomable view of the image
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (BuildContext imageContext) =>
-                            PhotoViewPage(image: _image!),
+                _childImageWidget(),
+                SizedBox(height: 20),
+                DropdownButton<String>(
+                  value: _selectedSampleImage,
+                  hint: Text(
+                    'Select a Sample Image',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  dropdownColor: Colors.black,
+                  items: sampleImages.keys.map((String key) {
+                    return DropdownMenuItem<String>(
+                      value: key,
+                      child: Text(
+                        key,
+                        style: TextStyle(color: Colors.white),
                       ),
                     );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    _loadSampleImage(sampleImages[newValue]!);
                   },
-                  child: Image.file(
-                    _image!,
-                    height: 200,
-                    fit: BoxFit.cover,
-                  ),
                 ),
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _pickImage,
                   style: ButtonStyle(
-                    backgroundColor:
-                    MaterialStateProperty.all(Colors.blueAccent),
+                    backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
                     shape: MaterialStateProperty.all(
                       RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
@@ -157,8 +177,7 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
                 ElevatedButton(
                   onPressed: _predict,
                   style: ButtonStyle(
-                    backgroundColor:
-                    MaterialStateProperty.all(Colors.greenAccent),
+                    backgroundColor: MaterialStateProperty.all(Colors.greenAccent),
                     shape: MaterialStateProperty.all(
                       RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
@@ -181,7 +200,7 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
                   'Prediction Result:',
                   style: TextStyle(
                     fontSize: 20,
-                    color: Colors.white,
+                    color: Colors.lightBlueAccent,
                   ),
                 ),
                 SizedBox(height: 10),
@@ -189,10 +208,31 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
                   _result.isNotEmpty ? _result : 'No result yet.',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.white,
+                    color: Colors.tealAccent,
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (_getGroundTruth() != null)
+                  Column(
+                    children: [
+                      SizedBox(height: 10),
+                      Text(
+                        'Ground Truth:',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        _getGroundTruth()!,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.orange,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -200,13 +240,69 @@ class _VITPredictionPageState extends State<VITPredictionPage> {
       ),
     );
   }
+
+  // Helper widget to display the image
+  Widget _childImageWidget() {
+    if (_image != null) {
+      // Render user-selected file
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext imageContext) => PhotoViewPage(
+                imageFile: _image!,
+                isAsset: false,
+              ),
+            ),
+          );
+        },
+        child: Image.file(
+          _image!,
+          height: 200,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else if (_selectedSampleImage != null) {
+      // Render sample image from assets
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (BuildContext imageContext) => PhotoViewPage(
+                imageAssetPath: sampleImages[_selectedSampleImage]!,
+                isAsset: true,
+              ),
+            ),
+          );
+        },
+        child: Image.asset(
+          sampleImages[_selectedSampleImage]!,
+          height: 200,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      return Text(
+        'No image selected.',
+        style: TextStyle(color: Colors.white),
+      );
+    }
+  }
 }
 
 // PhotoViewPage class for zooming into the image
 class PhotoViewPage extends StatelessWidget {
-  final File image;
+  final File? imageFile;
+  final String? imageAssetPath;
+  final bool isAsset;
 
-  const PhotoViewPage({required this.image});
+  const PhotoViewPage({
+    this.imageFile,
+    this.imageAssetPath,
+    required this.isAsset,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +310,9 @@ class PhotoViewPage extends StatelessWidget {
       backgroundColor: Colors.black,
       body: Center(
         child: PhotoView(
-          imageProvider: FileImage(image),
+          imageProvider: isAsset
+              ? AssetImage(imageAssetPath!)
+              : FileImage(imageFile!) as ImageProvider,
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 2,
           heroAttributes: const PhotoViewHeroAttributes(tag: "imageHero"),

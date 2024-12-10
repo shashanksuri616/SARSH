@@ -314,6 +314,9 @@ class _SARColorizationPageState extends State<SARColorizationPage> {
   File? _outputImage;
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  bool _showGroundTruth = false;  // Toggle for showing the ground truth image
+  String _selectedSampleImage = '';  // Path for selected sample image
+  String _selectedGroundTruthImage = '';  // Path for corresponding ground truth image
 
   // Pick an image from the gallery
   Future<void> _pickImage() async {
@@ -338,7 +341,7 @@ class _SARColorizationPageState extends State<SARColorizationPage> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://172.16.20.30:5000/predict2'),
+        Uri.parse('http://192.168.0.195:5000/predict2'),
       );
 
       final imageFile = await http.MultipartFile.fromPath('image', _inputImage!.path);
@@ -410,69 +413,142 @@ class _SARColorizationPageState extends State<SARColorizationPage> {
     );
   }
 
+  // Dropdown to select sample images from assets
+  Widget _buildSampleImageDropdown() {
+    List<String> sampleImages = [
+      'assets/sample_images/sample1.jpg',
+      'assets/sample_images/sample2.jpg',
+      'assets/sample_images/sample3.jpg',
+    ];
+
+    return DropdownButton<String>(
+      value: _selectedSampleImage.isEmpty ? null : _selectedSampleImage,
+      hint: Text('Select Sample Image', style: TextStyle(color: Colors.white)),
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedSampleImage = newValue!;
+          _inputImage = null;
+          _outputImage = null;
+
+          // Set corresponding ground truth image based on sample selection
+          _selectedGroundTruthImage = newValue.replaceAll('sample', 'groundtruth');
+        });
+      },
+      items: sampleImages.map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value.split('/').last, style: TextStyle(color: Colors.white)),
+        );
+      }).toList(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('SAR Image Colorization'), backgroundColor: Colors.black),
       backgroundColor: Colors.black,
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+      body: Center(  // Centering the entire body
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,  // Aligning vertically in the center
+              crossAxisAlignment: CrossAxisAlignment.center,  // Aligning horizontally in the center
+              children: [
+                const Text('SAR Image Colorization', style: TextStyle(fontSize: 24, color: Colors.white)),
+                const SizedBox(height: 20),
 
-              const Text('SAR Image Colorization', style: TextStyle(fontSize: 24, color: Colors.white)),
-              const SizedBox(height: 20),
-              if (_inputImage != null) ...[
-                Text('Input Image', style: TextStyle(color: Colors.white)),
-                GestureDetector(
-                  onTap: () => _viewImage(_inputImage!),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.file(
-                      _inputImage!,
-                      height: 200,
-                      width: 200,
-                      fit: BoxFit.cover,
+                // Display sample image dropdown
+                _buildSampleImageDropdown(),
+
+                const SizedBox(height: 20),
+
+                // Display selected sample image
+                if (_selectedSampleImage.isNotEmpty)
+                  Image.asset(_selectedSampleImage, height: 200, width: 200, fit: BoxFit.cover),
+
+                const SizedBox(height: 20),
+
+                if (_inputImage != null) ...[
+                  Text('Input Image', style: TextStyle(color: Colors.white)),
+                  GestureDetector(
+                    onTap: () => _viewImage(_inputImage!),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(
+                        _inputImage!,
+                        height: 200,
+                        width: 200,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
+                  SizedBox(height: 20),
+                ],
+
+                ElevatedButton(
+                  onPressed: _pickImage,
+                  style: _buttonStyle(Colors.blueAccent),
+                  child: _buttonText('Pick Image'),
                 ),
                 SizedBox(height: 20),
-              ],
-              ElevatedButton(
-                onPressed: _pickImage,
-                style: _buttonStyle(Colors.blueAccent),
-                child: _buttonText('Pick Image'),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _processImage,
-                style: _buttonStyle(Colors.greenAccent),
-                child: _isLoading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : _buttonText('Colorize'),
-              ),
-              if (_outputImage != null) ...[
-                SizedBox(height: 20),
-                Text('Output Image', style: TextStyle(color: Colors.white)),
-                GestureDetector(
-                  onTap: () => _viewImage(_outputImage!),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.file(
-                      _outputImage!,
-                      height: 200,
-                      width: 200,
-                      fit: BoxFit.cover,
+                ElevatedButton(
+                  onPressed: _processImage,
+                  style: _buttonStyle(Colors.greenAccent),
+                  child: _isLoading
+                      ? CircularProgressIndicator(color: Colors.white)
+                      : _buttonText('Colorize'),
+                ),
+
+                // Display output image
+                if (_outputImage != null) ...[
+                  SizedBox(height: 20),
+                  Text('Output Image', style: TextStyle(color: Colors.white)),
+                  GestureDetector(
+                    onTap: () => _viewImage(_outputImage!),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(
+                        _outputImage!,
+                        height: 200,
+                        width: 200,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                ),
+                ],
+
+                // Toggle button to show ground truth image
+                if (_inputImage != null && !_showGroundTruth) ...[
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _showGroundTruth = !_showGroundTruth;
+                      });
+                    },
+                    style: _buttonStyle(Colors.orangeAccent),
+                    child: _buttonText(_showGroundTruth ? 'Hide Ground Truth' : 'Show Ground Truth'),
+                  ),
+                ],
+
+                if (_showGroundTruth && _selectedGroundTruthImage.isNotEmpty) ...[
+                  SizedBox(height: 20),
+                  Text('Ground Truth Image', style: TextStyle(color: Colors.white)),
+                  Image.asset(
+                      _selectedGroundTruthImage,
+                      height: 200,
+                      width: 200,
+                      fit: BoxFit.cover
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+

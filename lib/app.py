@@ -128,7 +128,7 @@ def predict_vit():
             outputs = vit_model(img_tensor)
             predicted_class_index = torch.argmax(outputs, dim=1).item()  # Get index of the highest score
             predicted_class = class_names[predicted_class_index]  # Map to the class name
-
+            print(outputs)
         return jsonify({'predicted_class': predicted_class})
 
     except Exception as e:
