@@ -1,5 +1,5 @@
-// dl_prediction_page.dart
-
+// vit_prediction_page.dart
+import 'dart:convert'; // Import this for JSON decoding
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,12 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
-class DLPredictionPage extends StatefulWidget {
+class VITPredictionPage extends StatefulWidget {
   @override
-  _DLPredictionPageState createState() => _DLPredictionPageState();
+  _VITPredictionPageState createState() => _VITPredictionPageState();
 }
 
-class _DLPredictionPageState extends State<DLPredictionPage> {
+class _VITPredictionPageState extends State<VITPredictionPage> {
   File? _image;
   final ImagePicker _picker = ImagePicker();
   String _result = '';
@@ -33,71 +33,63 @@ class _DLPredictionPageState extends State<DLPredictionPage> {
   }
 
   // Send the image to the Flask server for prediction
+  // Future<void> _predict() async {
+  //   if (_image == null) return;
+  //
+  //   final request = http.MultipartRequest(
+  //     'POST',
+  //     Uri.parse('http://172.16.20.30:5000/predict_vit'), // Replace with your Flask server URL
+  //   );
+  //   request.files.add(
+  //     await http.MultipartFile.fromPath('image', _image!.path),
+  //   );
+  //
+  //   final response = await request.send();
+  //   final responseData = await response.stream.bytesToString();
+  //
+  //   setState(() {
+  //     _result = responseData;
+  //   });
+  // }
+
+
+// Send the image to the Flask server for prediction
   Future<void> _predict() async {
     if (_image == null) return;
 
     final request = http.MultipartRequest(
       'POST',
-    //   Uri.parse('https://relevant-tick-mna-a0f12a9b.koyeb.app/predict'), // Replace with your Flask server URL
-    // );
-    Uri.parse('http://172.16.20.30:5000/predict'), // Replace with your Flask server URL
+      Uri.parse('http://172.16.20.30:5000/predict_vit'), // Replace with your Flask server URL
     );
     request.files.add(
       await http.MultipartFile.fromPath('image', _image!.path),
     );
 
-    final response = await request.send();
-    final responseData = await response.stream.bytesToString();
+    try {
+      final response = await request.send();
+      final responseData = await response.stream.bytesToString();
 
-    setState(() {
-      _result = responseData;
-    });
-  }
+      // Decode JSON response
+      final decodedResponse = json.decode(responseData);
 
-  // Show a dialog with ground truth values
-  void _showGroundTruths() {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(
-            'Ground Truth Values',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: Container(
-            width: double.maxFinite,
-            child: ListView.builder(
-              itemCount: groundTruths.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(
-                    groundTruths[index],
-                    style: TextStyle(color: Colors.white),
-                  ),
-                );
-              },
-            ),
-          ),
-          backgroundColor: Colors.black,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                'Close',
-                style: TextStyle(color: Colors.blueAccent),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+      // Extract prediction field
+      final prediction = decodedResponse['predicted_class']; // Update 'prediction' key based on your JSON structure
+
+      setState(() {
+        _result = prediction != null ? prediction.toString() : 'No prediction found.';
+      });
+    } catch (e) {
+      setState(() {
+        _result = 'Error: Unable to fetch prediction.';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('DL Prediction'),
+        title: Text('VIT Prediction'),
         backgroundColor: Colors.black,
       ),
       backgroundColor: Colors.black,
@@ -127,7 +119,8 @@ class _DLPredictionPageState extends State<DLPredictionPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (BuildContext imageContext) => PhotoViewPage(image: _image!),
+                        builder: (BuildContext imageContext) =>
+                            PhotoViewPage(image: _image!),
                       ),
                     );
                   },
@@ -141,7 +134,8 @@ class _DLPredictionPageState extends State<DLPredictionPage> {
                 ElevatedButton(
                   onPressed: _pickImage,
                   style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
+                    backgroundColor:
+                    MaterialStateProperty.all(Colors.blueAccent),
                     shape: MaterialStateProperty.all(
                       RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
@@ -163,7 +157,8 @@ class _DLPredictionPageState extends State<DLPredictionPage> {
                 ElevatedButton(
                   onPressed: _predict,
                   style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all(Colors.greenAccent),
+                    backgroundColor:
+                    MaterialStateProperty.all(Colors.greenAccent),
                     shape: MaterialStateProperty.all(
                       RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
@@ -181,28 +176,6 @@ class _DLPredictionPageState extends State<DLPredictionPage> {
                     ),
                   ),
                 ),
-                SizedBox(height: 20),
-                // ElevatedButton(
-                //   onPressed: _showGroundTruths,
-                //   style: ButtonStyle(
-                //     backgroundColor: MaterialStateProperty.all(Colors.orangeAccent),
-                //     shape: MaterialStateProperty.all(
-                //       RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(30),
-                //       ),
-                //     ),
-                //     padding: MaterialStateProperty.all(
-                //       EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                //     ),
-                //   ),
-                //   child: Text(
-                //     'Show Ground Truths',
-                //     style: TextStyle(
-                //       color: Colors.white,
-                //       fontSize: 20,
-                //     ),
-                //   ),
-                // ),
                 SizedBox(height: 30),
                 Text(
                   'Prediction Result:',

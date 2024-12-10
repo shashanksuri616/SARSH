@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dl_prediction_page.dart';
 import 'sar_colorization_page.dart'; // Import the SAR colorization page
+import 'dl_prediction_page.dart';
+import 'vit_prediction_page.dart';
+import 'flood_detection.dart';
 
 class DashboardPage extends StatefulWidget {
   @override
@@ -14,8 +16,9 @@ class _DashboardPageState extends State<DashboardPage> {
   // Updated list of pages to include the SARColorizationPage
   final List<Widget> _pages = [
     DashboardContent(),
-    DLPredictionPage(),
     SARColorizationPage(),
+    FloodPage(),
+    VITPredictionPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -39,12 +42,16 @@ class _DashboardPageState extends State<DashboardPage> {
             label: 'Dashboard',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.image),
+            label: 'SAR Colorization',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
-            label: 'DL Prediction',
+            label: 'Flood Detection',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.image),
-            label: 'SAR Colorization',
+            label: 'Crop classification',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.logout),
@@ -54,13 +61,23 @@ class _DashboardPageState extends State<DashboardPage> {
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.blueAccent,
         unselectedItemColor: Colors.black,
-        backgroundColor: Colors.black,
+        selectedLabelStyle: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontSize: 9,
+          color: Colors.black,
+        ),
+        backgroundColor: Colors.grey[200], // Light background to highlight black text
+        type: BottomNavigationBarType.fixed, // Prevent shifting effect
         onTap: (index) {
-          if (index == 3) {
+          if (index == 4) {
             // Logout functionality
             FirebaseAuth.instance.signOut();
-            Navigator.of(context).pushReplacementNamed(
-                '/login'); // Navigate back to the login page
+            Navigator.of(context)
+                .pushReplacementNamed('/login'); // Navigate back to the login page
           } else {
             _onItemTapped(index);
           }
