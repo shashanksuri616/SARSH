@@ -40,7 +40,7 @@ class _DLPredictionPageState extends State<DLPredictionPage> {
       'POST',
     //   Uri.parse('https://relevant-tick-mna-a0f12a9b.koyeb.app/predict'), // Replace with your Flask server URL
     // );
-    Uri.parse('http://192.168.1.8:5000/predict'), // Replace with your Flask server URL
+    Uri.parse('http://172.16.20.30:5000/predict'), // Replace with your Flask server URL
     );
     request.files.add(
       await http.MultipartFile.fromPath('image', _image!.path),
