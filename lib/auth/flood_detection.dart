@@ -40,7 +40,7 @@ class _FloodPageState extends State<FloodPage> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.0.195:5000/flood'), // Replace with your Flask server URL
+        Uri.parse('http://192.168.1.7:5000/flood'), // Replace with your Flask server URL
       );
 
       request.files.add(

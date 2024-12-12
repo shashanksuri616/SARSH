@@ -80,6 +80,7 @@ def predict_onnx():
     # Read and preprocess the image for the ONNX model
     img = Image.open(BytesIO(img_file.read()))
     img = img.resize((256, 256))  # Adjust size as needed
+    print(np.array(img))
     img = np.array(img).transpose(2, 0, 1)  # HWC to CHW
     img = img.astype(np.float32) / 255.0  # Normalize to [0, 1]
     img = (img - 0.5) / 0.5  # Normalize to [-1, 1]
