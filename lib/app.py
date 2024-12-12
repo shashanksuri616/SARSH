@@ -12,6 +12,7 @@ import torch
 from torchvision import transforms  # For image preprocessing in ViT
 from patchify import patchify
 import cv2
+from torchmetrics.image.fid import FrechetInceptionDistance  # Import FID calculation
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
 
@@ -21,7 +22,7 @@ keras_model = load_model('model.keras', custom_objects={"dice_loss": lambda x, y
 # Load the ONNX model for SAR image colorization
 onnx_model_path = "sar2rgb.onnx"
 onnx_sess = onnxruntime.InferenceSession(onnx_model_path)
-
+fid = FrechetInceptionDistance().to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 #Load a pre-trained VIT Model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 vit_model_path = "vit_model.pth"  # Replace with the actual path to your .pth file
@@ -67,6 +68,38 @@ def predict_vgg16():
     return jsonify(predicted_class)
 
 # SAR Colorization
+@app.route('/predict_sample', methods=['POST'])
+def predict_sample():
+    if 'generated_image' not in request.files or 'groundtruth_image' not in request.files:
+        return jsonify({'error': 'Both generated and ground truth images are required'}), 400
+
+    generated_file = request.files['generated_image']
+    groundtruth_file = request.files['groundtruth_image']
+
+    # Clear any previous image and data before loading new ones
+    gc.collect()
+
+    try:
+        # Load and preprocess the generated image
+        generated_img = Image.open(BytesIO(generated_file.read())).convert('RGB')
+        generated_img = generated_img.resize((256, 256))  # Resize to match ONNX model output
+        generated_tensor = transforms.ToTensor()(generated_img).unsqueeze(0).to(fid.device)
+
+        # Load and preprocess the ground truth image
+        groundtruth_img = Image.open(BytesIO(groundtruth_file.read())).convert('RGB')
+        groundtruth_img = groundtruth_img.resize((256, 256))
+        groundtruth_tensor = transforms.ToTensor()(groundtruth_img).unsqueeze(0).to(fid.device)
+
+        # Calculate FID score
+        fid.update(generated_tensor, real=False)
+        fid.update(groundtruth_tensor, real=True)
+        fid_score = fid.compute().item()
+
+        # Return the FID score and optionally the generated image
+        return jsonify({'fid_score': fid_score})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 @app.route('/predict2', methods=['POST'])
 def predict_onnx():
     if 'image' not in request.files:
