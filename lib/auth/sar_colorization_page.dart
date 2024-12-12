@@ -43,7 +43,9 @@ class _SARColorizationPageState extends State<SARColorizationPage> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.7:5000/predict2'),
+        Uri.parse(_selectedSampleImage.isNotEmpty
+            ? 'http://192.168.1.7:5000/predict_sample' // New route for sample image
+            : 'http://192.168.1.7:5000/predict2'),
       );
 
       if (_selectedSampleImage.isNotEmpty) {
@@ -54,7 +56,7 @@ class _SARColorizationPageState extends State<SARColorizationPage> {
 
         // Create MultipartFile from bytes
         final imageMultipart = http.MultipartFile.fromBytes(
-          'image',
+          'sample_image',
           fileBytes,
           filename: _selectedSampleImage.split('/').last, // Use the asset filename
         );
@@ -69,7 +71,7 @@ class _SARColorizationPageState extends State<SARColorizationPage> {
         );
 
         final groundTruthMultipart = http.MultipartFile.fromBytes(
-          'groundtruth',
+          'ground_truth',
           groundTruthBytes,
           filename: _selectedGroundTruthImage.split('/').last,
         );
