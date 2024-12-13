@@ -12,7 +12,7 @@ app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
 
 # Load the VGG16 model from .h5 file
-#model = load_model('crop_prediction_VGG16#3.h5')
+model1 = load_model('crop_prediction_VGG16#3.h5')
 model = load_model('model.keras', custom_objects={"dice_loss": lambda x, y: x, "dice_coef": lambda x, y: x})
 
 cf = {
@@ -40,7 +40,7 @@ def predict():
     img_array = np.expand_dims(img_array, axis=0)
 
     # Make prediction
-    preds = model.predict(img_array)
+    preds = model1.predict(img_array)
     print(preds)
 
     # Find the index of the class with the highest probability
